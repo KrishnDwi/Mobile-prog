@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'login_page.dart';
+import 'product_detail_page.dart';
 
 void main() => runApp(const MainApp());
 
@@ -101,7 +102,7 @@ class _ProductPageState extends State<ProductPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Produk'),
+        title: const Text('Menu'),
         actions: [IconButton(onPressed: _logout, icon: const Icon(Icons.logout))],
       ),
       body: isLoading
@@ -112,7 +113,25 @@ class _ProductPageState extends State<ProductPage> {
                   itemCount: products.length,
                   itemBuilder: (context, index) {
                     final product = products[index];
-                    return ListTile(title: Text(product['name']));
+                    return Card(
+                    margin: const EdgeInsets.symmetric(
+                        horizontal: 8.0, vertical: 4.0),
+                    child: ListTile(
+                      title: Text(product['name']),
+                      subtitle: Text('Rp ${product['price']}'), // Menampilkan harga
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        // Aksi ketika item di-klik
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                ProductDetailPage(product: product),
+                          ),
+                        );
+                      },
+                    ),
+                  );
                   },
                 ),
     );
