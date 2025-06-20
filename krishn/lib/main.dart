@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'login_page.dart';
 import 'product_detail_page.dart';
 import 'product_form_page.dart';
+import 'profile_page.dart';
 
 void main() => runApp(const MainApp());
 
@@ -13,9 +14,7 @@ class MainApp extends StatelessWidget {
   const MainApp({super.key});
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: AuthCheckPage(),
-    );
+    return const MaterialApp(home: AuthCheckPage());
   }
 }
 
@@ -36,11 +35,13 @@ class _AuthCheckPageState extends State<AuthCheckPage> {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
     if (token != null) {
-      Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const ProductPage()));
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const ProductPage()));
     } else {
-      Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const LoginPage()));
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
     }
   }
 
@@ -80,10 +81,12 @@ class _ProductPageState extends State<ProductPage> {
   void _filterProducts() {
     final query = _searchController.text.toLowerCase();
     setState(() {
-      _filteredProducts = _allProducts.where((product) {
-        final productName = (product['name'] as String? ?? '').toLowerCase();
-        return productName.contains(query);
-      }).toList();
+      _filteredProducts =
+          _allProducts.where((product) {
+            final productName =
+                (product['name'] as String? ?? '').toLowerCase();
+            return productName.contains(query);
+          }).toList();
     });
   }
 
@@ -119,8 +122,9 @@ class _ProductPageState extends State<ProductPage> {
       headers: {'Authorization': 'Bearer $token'},
     );
     await prefs.remove('auth_token');
-    Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginPage()));
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginPage()));
   }
 
   // --- FUNGSI BARU UNTUK NAVIGASI KE FORM ---
@@ -143,14 +147,23 @@ class _ProductPageState extends State<ProductPage> {
   Future<void> _deleteProduct(int id) async {
     final bool? confirmed = await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Konfirmasi'),
-        content: const Text('Apakah Anda yakin ingin menghapus produk ini?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Batal')),
-          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Hapus')),
-        ],
-      ),
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Konfirmasi'),
+            content: const Text(
+              'Apakah Anda yakin ingin menghapus produk ini?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Batal'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Hapus'),
+              ),
+            ],
+          ),
     );
 
     if (confirmed == true) {
@@ -174,9 +187,9 @@ class _ProductPageState extends State<ProductPage> {
           );
         }
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
@@ -186,9 +199,28 @@ class _ProductPageState extends State<ProductPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kelola Menu'),
-        actions: [IconButton(onPressed: _logout, icon: const Icon(Icons.logout))],
+        // Modifikasi bagian 'actions'
+        actions: [
+          // TOMBOL BARU UNTUK PROFIL
+          IconButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ProfilePage()),
+              );
+            },
+            icon: const Icon(Icons.person),
+            tooltip: 'Profil',
+          ),
+          // Tombol logout yang sudah ada
+          IconButton(
+            onPressed: _logout,
+            icon: const Icon(Icons.logout),
+            tooltip: 'Logout',
+          ),
+        ],
       ),
-      // --- TAMBAHKAN TOMBOL TAMBAH DATA ---
+      // TOMBOL TAMBAH DATA
       floatingActionButton: FloatingActionButton(
         onPressed: () => _navigateAndRefresh(const ProductFormPage()),
         child: const Icon(Icons.add),
@@ -203,52 +235,70 @@ class _ProductPageState extends State<ProductPage> {
               decoration: InputDecoration(
                 labelText: 'Cari menu...',
                 prefixIcon: const Icon(Icons.search),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10.0)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
               ),
             ),
           ),
           Expanded(
-            child: isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : error != null
+            child:
+                isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : error != null
                     ? Center(child: Text(error!))
                     : _filteredProducts.isEmpty
-                        ? const Center(child: Text('Menu tidak ditemukan.'))
-                        : ListView.builder(
-                            itemCount: _filteredProducts.length,
-                            itemBuilder: (context, index) {
-                              final product = _filteredProducts[index];
-                              return Card(
-                                margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-                                child: ListTile(
-                                  title: Text(product['name']),
-                                  subtitle: Text('Rp ${product['price']}'),
-                                  // --- TAMBAHKAN TOMBOL EDIT & DELETE ---
-                                  trailing: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit, color: Colors.blue),
-                                        onPressed: () => _navigateAndRefresh(ProductFormPage(product: product)),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete, color: Colors.red),
-                                        onPressed: () => _deleteProduct(product['id']),
-                                      ),
-                                    ],
+                    ? const Center(child: Text('Menu tidak ditemukan.'))
+                    : ListView.builder(
+                      itemCount: _filteredProducts.length,
+                      itemBuilder: (context, index) {
+                        final product = _filteredProducts[index];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(
+                            horizontal: 8.0,
+                            vertical: 4.0,
+                          ),
+                          child: ListTile(
+                            title: Text(product['name']),
+                            subtitle: Text('Rp ${product['price']}'),
+                            // --- TAMBAHKAN TOMBOL EDIT & DELETE ---
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.blue,
                                   ),
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) => ProductDetailPage(product: product),
+                                  onPressed:
+                                      () => _navigateAndRefresh(
+                                        ProductFormPage(product: product),
                                       ),
-                                    );
-                                  },
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed:
+                                      () => _deleteProduct(product['id']),
+                                ),
+                              ],
+                            ),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) =>
+                                          ProductDetailPage(product: product),
                                 ),
                               );
                             },
                           ),
+                        );
+                      },
+                    ),
           ),
         ],
       ),
