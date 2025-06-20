@@ -21,8 +21,8 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _usernameController.text = 'testuser';
-    _passwordController.text = 'password';
+    _usernameController.text = 'bagus';
+    _passwordController.text = 'admin123';
   }
 
   Future<void> _login() async {
