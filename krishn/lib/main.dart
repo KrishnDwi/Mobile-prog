@@ -11,7 +11,7 @@ void main() {
 // FUNGSI UNTUK MENDAPATKAN URL API YANG BENAR
 String get apiUrl {
   // Ganti '192.168.1.10' dengan IP Address LOKAL KOMPUTER ANDA
-  const String localIp = '192.168.1.10'; 
+  const String localIp = '127.0.0.1'; 
   
   if (Platform.isAndroid) {
     // Untuk emulator Android, 10.0.2.2 merujuk ke localhost komputer
