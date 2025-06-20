@@ -1,29 +1,12 @@
-// Salin dan tempel seluruh kode ini ke file main.dart Anda
+// Lokasi: krishn/lib/main.dart (Versi Final)
+
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:io'; // Import untuk Platform
 
 void main() {
   runApp(const MainApp());
 }
-
-// FUNGSI UNTUK MENDAPATKAN URL API YANG BENAR
-String get apiUrl {
-  // Ganti '192.168.1.10' dengan IP Address LOKAL KOMPUTER ANDA
-  const String localIp = '127.0.0.1'; 
-  
-  if (Platform.isAndroid) {
-    // Untuk emulator Android, 10.0.2.2 merujuk ke localhost komputer
-    // Tapi untuk device fisik, harus pakai IP lokal
-    // Cara paling aman adalah selalu gunakan IP lokal komputer.
-    return 'http://$localIp:8000/api/products';
-  } else {
-    // Untuk iOS atau platform lain
-    return 'http://$localIp:8000/api/products';
-  }
-}
-
 
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
@@ -45,55 +28,54 @@ class ProductPage extends StatefulWidget {
 }
 
 class _ProductPageState extends State<ProductPage> {
+  // 1. Ubah isLoading menjadi true agar loading tampil saat pertama kali
+  bool isLoading = true;
   List<dynamic> products = [];
-  bool isLoading = true; // Set true agar loading tampil saat pertama kali
   String? errorMessage;
 
+  // 2. Gunakan initState untuk memanggil data secara otomatis
   @override
   void initState() {
     super.initState();
-    fetchProducts(); // Langsung panggil data saat halaman dibuka
+    fetchProducts();
   }
 
   Future<void> fetchProducts() async {
+    // Set state untuk menampilkan loading dan menghapus error lama
     setState(() {
       isLoading = true;
       errorMessage = null;
     });
 
+    // URL API dari server Laravel Anda
+    const url = 'http://127.0.0.1:8000/api/products';
+
     try {
-      final response = await http
-          .get(Uri.parse(apiUrl))
-          .timeout(const Duration(seconds: 10)); // Timeout lebih lama
-          
-      debugPrint('Connecting to: $apiUrl');
-      debugPrint('Status code: ${response.statusCode}');
-      debugPrint('Body: ${response.body}');
+      final response = await http.get(Uri.parse(url)).timeout(const Duration(seconds: 10));
+      
+      // Print di debug console untuk memastikan kode berjalan
+      debugPrint('Status Code: ${response.statusCode}');
+      debugPrint('Response Body: ${response.body}');
 
       if (response.statusCode == 200) {
-        // Cek jika response body tidak kosong
-        if (response.body.isNotEmpty) {
-           final data = jsonDecode(response.body);
-            setState(() {
-              products = data;
-              isLoading = false;
-            });
-        } else {
-           setState(() {
-            products = []; // Atur data jadi kosong jika response body kosong
-            isLoading = false;
-          });
-        }
-      } else {
+        // Jika respons berhasil, decode JSON
         setState(() {
+          products = jsonDecode(response.body);
           isLoading = false;
-          errorMessage = 'Failed to load products. Status code: ${response.statusCode}';
+        });
+      } else {
+        // Jika server merespons dengan error (404, 500, dll)
+        setState(() {
+          errorMessage = 'Gagal memuat data. Status: ${response.statusCode}';
+          isLoading = false;
         });
       }
     } catch (e) {
+      // Jika terjadi error koneksi (misal: server mati, tidak ada internet)
+      debugPrint('Error: $e');
       setState(() {
+        errorMessage = 'Terjadi kesalahan koneksi: $e';
         isLoading = false;
-        errorMessage = 'Error connecting to server: $e';
       });
     }
   }
@@ -102,51 +84,55 @@ class _ProductPageState extends State<ProductPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Daftar Produk'),
-        backgroundColor: Colors.blueAccent,
-        foregroundColor: Colors.white,
+        title: const Text('Produk Laravel'),
         actions: [
+          // Tambahkan tombol refresh di AppBar
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: fetchProducts,
-            tooltip: 'Refresh Data',
           ),
         ],
       ),
-      body: Center( // Dibungkus dengan Center
-        child: isLoading
-            ? const CircularProgressIndicator()
-            : errorMessage != null
-                ? Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Text(
-                      'Gagal memuat data:\n$errorMessage',
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.red, fontSize: 16),
-                    ),
-                  )
-                : products.isEmpty
-                    ? const Text('Tidak ada produk yang tersedia.')
-                    : ListView.builder(
-                        itemCount: products.length,
-                        itemBuilder: (context, index) {
-                          final product = products[index];
-                          return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                            child: ListTile(
-                              title: Text(
-                                product['name']?.toString() ?? 'Nama tidak tersedia', 
-                                style: const TextStyle(fontWeight: FontWeight.bold)
-                              ),
-                              subtitle: Text('Harga: Rp ${product['price']?.toString() ?? '0'}'),
-                              leading: CircleAvatar(
-                                child: Text((index + 1).toString()),
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+      body: Center(
+        child: _buildBody(),
       ),
     );
+  }
+
+  // Widget helper untuk body agar lebih rapi
+  Widget _buildBody() {
+    if (isLoading) {
+      // Tampilkan loading jika isLoading true
+      return const CircularProgressIndicator();
+    } else if (errorMessage != null) {
+      // Tampilkan pesan error jika ada
+      return Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Text(
+          errorMessage!,
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: Colors.red, fontSize: 16),
+        ),
+      );
+    } else if (products.isEmpty) {
+      // Tampilkan pesan jika data kosong
+      return const Text('Tidak ada produk yang ditemukan.');
+    } else {
+      // Tampilkan daftar produk jika semua berhasil
+      return ListView.builder(
+        itemCount: products.length,
+        itemBuilder: (context, index) {
+          final product = products[index];
+          return Card(
+            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            child: ListTile(
+              leading: CircleAvatar(child: Text('${product['id']}')),
+              title: Text(product['name'] ?? 'Tanpa Nama'),
+              subtitle: Text('Harga: ${product['price']}'),
+            ),
+          );
+        },
+      );
+    }
   }
 }
